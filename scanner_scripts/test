@@ -1,0 +1,8 @@
+#!bin/csh -f
+
+setenv CIFS_DIR /home/cristina/mrpg_share2/Cristina/MILD_scans/raw/ZTE/Exam1/Series1
+setenv EXAM_NO $1
+shift
+foreach series ($argv)
+	echo $series
+end 

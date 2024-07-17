@@ -1,0 +1,40 @@
+#!bin/csh -f 
+
+setenv REMOTE_DIR /data/arc/Closed/Exam$1 #vre dir
+setenv SCANNER_DIR /export/home/sdc/UTErecon 
+setenv LOG_FILE /usr/people/cris/logs/Exam$1.log 
+setenv CIFS_DIR /home/cristina/mrpg_share2/Cristina/Volunteer_scans/MR/Exam$1/ZTE
+setenv DIR_TO_BOX /home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam$1
+setenv EXAM_NO $1
+shift #deletes the first argument
+
+foreach series ($argv)
+	echo "-----------------Series$series------------------------">>$LOG_FILE
+	setenv CUR_REMOTE_DIR $REMOTE_DIR/Series$series 
+	setenv REMOTE_DIR_EXIST `ssh vre | test -d $CUR_REMOTE_DIR`
+	echo 'Connected to vre'
+	if ($REMOTE_DIR_EXIST <1) then
+		setenv LIST_SCAN_ARCHIVE `ssh vre ls $CUR_REMOTE_DIR`
+	echo $LIST_SCAN_ARCHIVE>>$LOG_FILE 
+
+	foreach i ($LIST_SCAN_ARCHIVE)
+		echo "----------------------------------">>$LOG_FILE
+		echo "Copying $i from vre to folder on scanner">>$LOG_FILE
+		scp vre:$CUR_REMOTE_DIR/$i $SCANNER_DIR>>$LOG_FILE
+		echo "Finished copying to the scanner $i">>$LOG_FILE
+		setenv CUR_CIFS_DIR $CIFS_DIR/Series$series
+		ssh -i id_mri_recon3 cristina@10.55.2.162 /bin/bash <<ENDSSH
+		if [ ! -d "$CUR_CIFS_DIR" ]; then
+			mkdir -p "$CUR_CIFS_DIR"
+		fi
+ENDSSH
+		scp -r -i id_mri_recon3 $SCANNER_DIR/$i cristina@10.55.2.162:$CUR_CIFS_DIR>>$LOG_FILE
+		rm -f "$SCANNER_DIR/$i"
+		echo "$i successfully transfered to cifs">>$LOG_FILE
+	end
+	echo ""
+end
+ssh -i id_mri_recon3 cristina@10.55.2.162 /bin/bash <<ENDSSH
+rclone copy "$CIFS_DIR" GE_box:ScanArchives/ZTE4DDL
+ENDSSH
+echo "Exam directory sent to box">>$LOG_FILE

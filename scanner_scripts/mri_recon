@@ -1,0 +1,10 @@
+#!bin/bash 
+
+LOG_FILE=/usr/people/cris/logs/Exam$4_Series$5.log
+#touch $LOG_FILE 
+#csh -e /usr/people/cris/vre_scan_v1 $1 $2 $3 $4 $5 $6 &>>$LOG_FILE &
+csh -e /usr/people/cris/scripts/vre_scan_v1 $1 $2 $3 $4 $5 $6 &>>$LOG_FILE & 
+# -e is added to exit the script when an error occurs
+
+
+ 

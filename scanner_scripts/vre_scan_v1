@@ -1,0 +1,127 @@
+#!/bin/csh -f
+#This is a C-shell script. It is run by writing csh in front of the name of the file to run
+
+
+echo --------------------------------
+echo Exam$4 Series$5
+echo ------------------------------- 
+
+
+#Defining the working directories
+setenv EXAM_DIR /export/home/sdc/UTE_recon/Exam$4
+setenv TARGET_DIR Exam$4_Series$5
+setenv RECON_DIR /media/data/cristina_data/first_recon #mri-recon3 directory
+setenv RESULTS_DIR /export/home1/sdc_image_pool/import #directory where the dicom folder will be saved 
+setenv STORING_DIR /export/home/sdc/UTErecon/$TARGET_DIR #directory where the scan archive and gating files will be stored
+setenv REMOTE_DIR /data/arc/Closed/Exam$4/Series$5
+
+echo ---Working directories---
+echo Reconstruction directory $RECON_DIR
+echo Results directory $RESULTS_DIR
+echo Storing directory $STORING_DIR
+echo Remote directory $REMOTE_DIR
+echo -------------------------- 
+
+
+#Creating the storing directory
+if (! -d $STORING_DIR) then
+	mkdir $STORING_DIR
+endif
+
+#Moving the gating files to the storing directory   
+setenv GATING_FILES `find /usr/g/mrraw/ -name "Gating*" -print0 |xargs -0 ls -t| head -2` #find the last 2 modified gating files
+echo $GATING_FILES
+cp -f $GATING_FILES $STORING_DIR
+echo Gating files transfered to the storing directory 
+
+setenv start_time `date +%s` #assigns a value to an environment variable
+setenv HFILE "" #empty variable
+set j=0 #sets a variable equal to a value
+
+#The test command takes an expression as an argument. After calculating the expression, the test returns a value to the variable $?. Returns 0 when the expression is true and 1 when false.
+# -d returns True if a files exists and is a directory. 
+#This while loops until the Exam/Series directory appears  
+while ( "$HFILE" == "" ) #while the HFILE stays empty
+	setenv REMOTE_DIR_EXIST `ssh vre 'test -d $REMOTE_DIR ; echo $?'`  #check if the remote directory exists
+	echo 'Connected to vre'
+	echo $REMOTE_DIR_EXIST
+	if ( $REMOTE_DIR_EXIST <1 ) then 
+		if ( $j == 0 ) then 
+			echo "$REMOTE_DIR exists"
+			echo "ssh vre find $REMOTE_DIR -name *.h5"
+			set j=1
+		endif
+		setenv HFILE `ssh vre find $REMOTE_DIR -name '*.h5' -size +5000000`
+		sleep 1 #wait one second
+else
+		sleep 1
+	endif
+end  
+echo Found .h5 file: $HFILE
+
+#Check if the filesize continues to grow
+set HFILESIZE_PREV = 0
+#stat gives information about a file. -c controls the format. %s is the total size in bytes 
+setenv HFILESIZE `ssh vre stat -c %s $HFILE` #stores the size of HFILE 
+
+echo $HFILESIZE
+#This while loops until the size of HFILE does not change anymore  
+while ( $HFILESIZE_PREV < $HFILESIZE )
+	sleep 1
+	set HFILESIZE_PREV = $HFILESIZE
+	setenv HFILESIZE `ssh vre stat -c %s $HFILE`
+end
+
+setenv end_time `date +%s`
+setenv EXTIME `expr $end_time - $start_time` #expr evalautes an expression 
+echo "$HFILE $HFILESIZE transfer complete after $EXTIME seconds"
+
+setenv HFILE `ssh vre ls -t $REMOTE_DIR | head -1` #selects the file that was last modified
+
+if ("$REMOTE_DIR" == "") then
+	echo "No remote dir, exiting..."
+	exit
+endif
+
+if ("$HFILE" == "") then
+	echo "No ScanArchive found, exiting..."
+	exit
+endif
+
+#Transfer the .h5 file from vre to the scanner
+#while ("$(ls -A  $EXAM_DIR)")
+#	echo Not empty
+#	sleep 1
+#end  
+
+scp -r vre:/$REMOTE_DIR/$HFILE $STORING_DIR
+echo "ScanArchive transfered from vre "
+
+scp -r -i /export/home/sdc/.ssh/id_mri_recon3 $STORING_DIR cristina@10.55.2.162:$RECON_DIR
+echo "ScanArchive and gating files transfered to mri-recon3"
+sleep 10
+rm -f -r $STORING_DIR  
+echo "Directory on scanner removed"
+
+echo Setting current dir
+setenv CURRENT_DIR "${RECON_DIR}/${TARGET_DIR}"  #current dir in mri-recon3
+echo Current dir: $CURRENT_DIR
+setenv FILE "${RECON_DIR}/docker_run.sh"
+echo Begin reconstruction
+
+ssh -i /export/home/sdc/.ssh/id_mri_recon3 cristina@10.55.2.162 /bin/bash <<ENDSSH
+cp "${FILE}" "${CURRENT_DIR}" #copies the docker_run script to the current working dir
+chmod 777 "${CURRENT_DIR}"
+docker run --rm -v "${CURRENT_DIR}":/home/sdkuser/local/data ubuntu_orc21 sh /home/sdkuser/local/data/docker_run.sh
+exit
+ENDSSH
+echo Reconstruction DONE
+
+scp -r -i /export/home/sdc/.ssh/id_mri_recon3 cristina@10.55.2.162:$RECON_DIR/$TARGET_DIR/dicom $RESULTS_DIR
+echo "Dicom folder copied from  mri-recon3"
+
+sleep 30
+mv $RESULTS_DIR/dicom $RESULTS_DIR/dicom.sdcopen
+echo "Images saved in the scanner database"
+
+echo "DONE"
