@@ -1,0 +1,91 @@
+#!/bin/csh -f
+#This a C-shell script to transfer the files related to the UTE Paris and to reconstruct the data that will be sent to the scanner
+
+echo -------------------------
+echo Exam$1 Series$2
+echo ------------------------
+
+#Defining the working directories
+setenv REMOTE_DIR /data/arc/Closed/Exam$1/Series$2
+setenv RESULTS_DIR /export/home1/sdc_image_pool/import #directory where the Dicom folder will be saved
+setenv TRAJ_DIR /usr/g/service/log #trajectory directory
+setenv GATING_DIR /usr/g/service/log/gating 
+setenv P_DIR /usr/g/mrraw #where the P file is stored, if it exists
+setenv STORING_DIR /export/home/sdc/UTE_recon/Exam$1 #where the ScanArchive is temporarilly stored on the scanner
+setenv RECON_DIR /home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam$1/Series$2-test
+
+
+echo ------Working directories----------
+echo Remote directory $REMOTE_DIR
+echo Results directory $RESULTS_DIR
+echo Trajectory file directory $TRAJ_DIR
+echo Gating files directory $GATING_DIR
+echo Temporary storage on the scanner $STORING_DIR
+echo Reconstruction directory $RECON_DIR
+
+#Creating the storing directory
+#if (! -d $STORING_DIR) then
+#	mkdir -p $STORING_DIR
+#endif
+
+
+#echo ---------------------------------------------
+#echo Waiting for the ScanArchive to appear and transfer it to the reconstruction folder  
+#setenv HFILE "" #empty variable to check when the Series folder is created
+#set j=0 #to check only once if the Exam folder exists 
+#Loop until the remote directory exists (HFILE not empty anymore)
+#while ( "$HFILE" == "" )
+#	setenv REMOTE_DIR_EXIST `ssh vre 'test -d $REMOTE_DIR ; echo $?'` #check if the remote directory exists
+#	if ( $REMOTE_DIR_EXIST <1 ) then
+#		if ($j == 0 ) then
+#			echo "$REMOTE_DIR exists"
+#			set j=1 #signal the remote directory has been found
+#		endif
+#		setenv HFILE `ssh vre find $REMOTE_DIR -name '*.h5' -size +50000` #look for h5 file larger than 5GB
+#		sleep 1
+#	else
+#		sleep 1
+#	endif
+#end
+
+#echo Found .h5 file: $HFILE
+
+#Check if the file size continues to grow
+#set HFILESIZE_PREV = 0
+#stat gives information about a file. -c controls the format. %s is the total size
+#setenv HFILESIZE `ssh vre stat -c %s $HFILE` #stores the size of HFILE
+
+#Loop until the size of the HFILE does not change anymore
+#while ( $HFILESIZE_PREV < $HFILESIZE )
+#	sleep 1
+#	set HFILESIZE_PREV = $HFILESIZE
+#	setenv HFILESIZE `ssh vre stat -c %s $HFILE`
+#end
+
+#setenv HFILE `ssh vre ls -t $REMOTE_DIR | head -1` #selects the file that was modified last
+#setenv SA_TIME `ssh vre ls -l --time=birth $REMOTE_DIR/$HFILE` #scan archive creation time
+#echo Scan archive creation time $SA_TIME 
+                
+#Find the trajectory file corresponding to the scan archive
+#echo Scan archive creation time + one hour "$date -d "$SA_TIME + 1 hour")"
+#find $TRAJ_DIR/radial* -newerBt "$(date -d "$SA_TIME + 1 hour")"  
+#find $TRAJ_DIR/radial* -newerBt "$(date -d "$(stat -c %y $REMOTE_DIR/$HFILE) - 1 minute")" -not -newerBt "$(date -d "$(stat -c %y $REMOTE_DIR/$HFILE) +1 minute")"
+#TODO add the rest of the files and test finding them
+echo Connecting to mri-recon3
+#Connecting to mri-recon3 and calling the Matlab reconstruction code
+ssh -i /export/home/sdc/.ssh/mri_recon3  cristina@10.55.2.162 /bin/bash <<ENDSSH
+/media/data/Software/MATLAB/R2023a/bin/matlab -nodisplay -r "addpath('/media/data/tools/paris_ute'); cd('$RECON_DIR'); StaticRecon_sa; exit;"
+exit
+ENDSSH
+scp -r -i /export/home/sdc/.ssh/mri_recon3 cristina@10.55.2.162:$RECON_DIR/dicomsOneCoil $RESULTS_DIR
+echo "DICOM folder copied from mri-recon3"
+
+sleep 30
+
+mv $RESULTS_DIR/dicomsOneCoil $RESULTS_DIR/dicomsOneCoil.sdcopen
+echo "Images saved in the scanner database"
+
+echo "DONE" 
+
+#TODO rename files to simple names before calling the reconstruction
+#TODO transfer the dicom files to the scanner database 
