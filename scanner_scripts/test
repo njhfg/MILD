@@ -1,6 +1,7 @@
 #!bin/bash
 
-LOG_FILE=/usr/people/cris/logs/Exam$1_Series$2.log
-csh -e /usr/people/cris/scripts/paris_reco $1 $2 &>>$LOG_FILE &
+#LOG_FILE=/usr/people/cris/logs/Exam$1_Series$2.log
+#csh -e /usr/people/cris/scripts/paris_reco $1 $2 &>>$LOG_FILE &
 
- 
+LOG_FILE=/export/home/sdc/scripts_MILD/Exam$1_Series$2.log
+csh -e /export/home/sdc/scripts_MILD/paris_reco $1 $2 &>>$LOG_FILE &

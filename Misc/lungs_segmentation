@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Sep 18 12:48:24 2024
+
+@author: cristina
+"""
+
+import dicom2nifti
+import zipfile
+import os
+import nibabel as ni
+import matplotlib.pyplot as plt
+import numpy as np
+from totalsegmentator.python_api import totalsegmentator
+
+#%%
+'''Convert DICOM to Nifti'''
+
+input_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/TE10.zip'
+output_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/TE10.nii'
+tmp_dir = None
+verbose = True
+
+if zipfile.is_zipfile(input_path):
+        if verbose: print(f"Extracting zip file: {input_path}")
+        extract_dir = os.path.splitext(input_path)[0] if tmp_dir is None else tmp_dir / "extracted_dcm"
+        with zipfile.ZipFile(input_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+            input_path = extract_dir
+#To convert with SimpleITK https://stackoverflow.com/questions/71042522/conversion-not-working-properly-using-dicom2nifti
+#Try to copy all the used functions from GitHub to use them one by one and change read_file to dcmread
+
+dicom2nifti.dicom_array_to_nifti(input_path, output_path, reorient_nifti=True)
+
+#Import original scan
+input_file = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_separated/out.nii'
+in_vol = ni.load(input_file)
+in_vol = np.asarray(in_vol.dataobj)
+#in_vol = np.rot90(in_vol, k=3)
+plt.imshow(in_vol[:,:, 50])
+plt.show()
+
+#Import left lung segmentation
+input_file = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_separated/segmentations/lung_left.nii.gz'
+left_lung = ni.load(input_file)
+left_lung = np.asarray(left_lung.dataobj)
+plt.imshow(left_lung[:,:, 50])
+plt.show()
+
+#Import right lung segmentation
+input_file = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_separated/segmentations/lung_right.nii.gz'
+right_lung = ni.load(input_file)
+right_lung = np.asarray(right_lung.dataobj)
+plt.imshow(right_lung[:,:, 50])
+plt.show()
+
+#Create the full lung mask
+mask = np.zeros(in_vol.shape)
+mask[left_lung==1] = 1 
+mask[right_lung==1] = 1
+plt.imshow(mask[:,:, 50])
+plt.show()
+
+#Overlay and extract the lungs
+seg_lungs = in_vol*mask
+plt.imshow(seg_lungs[:,:, 50])
+plt.show()

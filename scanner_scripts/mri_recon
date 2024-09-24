@@ -1,9 +1,11 @@
 #!bin/bash 
 
-LOG_FILE=/usr/people/cris/logs/Exam$4_Series$5.log
+#LOG_FILE=/usr/people/cris/logs/Exam$4_Series$5.log
+LOG_FILE=/export/home/sdc/MILD/logs/Exam$1_ZTE.log
 #touch $LOG_FILE 
+csh -e /export/home/sdc/MILD/scripts/zte_transfer $1 $2 &>>$LOG_FILE &
 #csh -e /usr/people/cris/vre_scan_v1 $1 $2 $3 $4 $5 $6 &>>$LOG_FILE &
-csh -e /usr/people/cris/scripts/vre_scan_v1 $1 $2 $3 $4 $5 $6 &>>$LOG_FILE & 
+#csh -e /usr/people/cris/scripts/vre_scan_v1 $1 $2 $3 $4 $5 $6 &>>$LOG_FILE & 
 # -e is added to exit the script when an error occurs
 
 
