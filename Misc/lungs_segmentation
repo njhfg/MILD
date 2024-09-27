@@ -17,52 +17,57 @@ from totalsegmentator.python_api import totalsegmentator
 #%%
 '''Convert DICOM to Nifti'''
 
-input_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/TE10.zip'
+input_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/TE10'
 output_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/TE10.nii'
-tmp_dir = None
-verbose = True
 
-if zipfile.is_zipfile(input_path):
-        if verbose: print(f"Extracting zip file: {input_path}")
-        extract_dir = os.path.splitext(input_path)[0] if tmp_dir is None else tmp_dir / "extracted_dcm"
-        with zipfile.ZipFile(input_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_dir)
-            input_path = extract_dir
-#To convert with SimpleITK https://stackoverflow.com/questions/71042522/conversion-not-working-properly-using-dicom2nifti
-#Try to copy all the used functions from GitHub to use them one by one and change read_file to dcmread
+dicom2nifti.dicom_series_to_nifti(input_path, output_path, reorient_nifti=True)
 
-dicom2nifti.dicom_array_to_nifti(input_path, output_path, reorient_nifti=True)
+#%% 
+'''Run Total Segmentator'''
 
-#Import original scan
-input_file = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_separated/out.nii'
-in_vol = ni.load(input_file)
-in_vol = np.asarray(in_vol.dataobj)
-#in_vol = np.rot90(in_vol, k=3)
-plt.imshow(in_vol[:,:, 50])
+vol_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/TE10.nii'
+total_seg_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/total_segmentations'
+vessels_seg_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/vessels_segmentations'
+
+if not os.path.exists(total_seg_path):
+    os.mkdir(total_seg_path)
+
+if not os.path.exists(vessels_seg_path):
+    os.mkdir(vessels_seg_path)
+
+totalsegmentator(vol_path, total_seg_path, task="total_mr", verbose=True)
+totalsegmentator(vol_path, vessels_seg_path, task="lung_vessels", verbose=True)
+
+#Delete the non-lungs segmentations
+seg_list = os.listdir(total_seg_path)
+for seg in seg_list:
+    if "lung" not in seg:
+        os.remove(os.path.join(total_seg_path, seg))
+
+#%%
+'''Create the masks'''
+
+vol = ni.load(vol_path)
+vol = np.asarray(vol.dataobj)
+vol = np.rot90(vol, k=3)
+plt.imshow(vol[:,:, 50])
 plt.show()
 
-#Import left lung segmentation
-input_file = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_separated/segmentations/lung_left.nii.gz'
-left_lung = ni.load(input_file)
+left_lung = ni.load(os.path.join(total_seg_path, "lung_left.nii.gz"))
 left_lung = np.asarray(left_lung.dataobj)
-plt.imshow(left_lung[:,:, 50])
-plt.show()
+left_lung = np.rot90(left_lung, k=3)
 
-#Import right lung segmentation
-input_file = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_separated/segmentations/lung_right.nii.gz'
-right_lung = ni.load(input_file)
+right_lung = ni.load(os.path.join(total_seg_path, "lung_right.nii.gz"))
 right_lung = np.asarray(right_lung.dataobj)
-plt.imshow(right_lung[:,:, 50])
-plt.show()
+right_lung = np.rot90(right_lung, k=3)
 
-#Create the full lung mask
-mask = np.zeros(in_vol.shape)
+mask = np.zeros(vol.shape)
 mask[left_lung==1] = 1 
 mask[right_lung==1] = 1
 plt.imshow(mask[:,:, 50])
 plt.show()
 
 #Overlay and extract the lungs
-seg_lungs = in_vol*mask
+seg_lungs = vol*mask
 plt.imshow(seg_lungs[:,:, 50])
 plt.show()
