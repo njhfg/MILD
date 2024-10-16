@@ -7,7 +7,6 @@ Created on Wed Sep 18 12:48:24 2024
 """
 
 import dicom2nifti
-import zipfile
 import os
 import nibabel as ni
 import matplotlib.pyplot as plt
