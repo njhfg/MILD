@@ -91,7 +91,8 @@ setenv PPG_DATA `find $GATING_DIR/PPGData_3dute_* -newermt "$TIME_MINUS_2" -not 
 echo PPGData $PPG_DATA
 setenv PPG_TRIG `find $GATING_DIR/PPGTrig_3dute_* -newermt "$TIME_MINUS_2" -not -newermt "$TIME_PLUS_2"`
 echo PPGTrig $PPG_TRIG 
-
+echo ----------------------
+echo Transferring files
 ssh -i mri_recon3 cristina@10.55.2.89 /bin/bash <<ENDSSH
 mkdir -p "$RECON_DIR"
 ENDSSH
@@ -105,15 +106,23 @@ scp -i mri_recon3 $PPG_TRIG cristina@10.55.2.89:$RECON_DIR
 scp vre:$REMOTE_DIR/$SA $STORING_DIR
 scp -i mri_recon3 $STORING_DIR/$SA cristina@10.55.2.89:$RECON_DIR
 rm -r -f $STORING_DIR
-    
+echo Transfer complete
+echo ------------------------------
+setenv TRAJ_FILE `basename $TRAJ_FILE`
+#echo $TRAJ_FILE
+setenv RESP_DATA `basename $RESP_DATA`
+setenv RESP_TRIG `basename $RESP_TRIG`
+setenv PPG_DATA `basename $PPG_DATA`
+setenv PPG_TRIG `basename $PPG_TRIG`
+ 
 echo Connecting to mri-recon3
 #Connecting to mri-recon3 and calling the Matlab reconstruction code
 ssh -i mri_recon3  cristina@10.55.2.89 /bin/bash <<ENDSSH
-mv "$RECON_DIR/radial*" "$RECON_DIR/radial3d_trajectory"
-mv "$RECON_DIR/RESPData*" "$RECON_DIR/RESPData_3dute"
-mv "$RECON_DIR/RESPTrig*" "$RECON_DIR/RESPTrig_3dute"
-mv "$RECON_DIR/PPGData*" "$RECON_DIR/PPGData_3dute"
-mv "$RECON_DIR/PPGTrig*" "$RECON_DIR/PPGTrig_3dute"
+mv "$RECON_DIR/$TRAJ_FILE" "$RECON_DIR/radial3d_trajectory"
+mv "$RECON_DIR/$RESP_DATA" "$RECON_DIR/RESPData_3dute"
+mv "$RECON_DIR/$RESP_TRIG" "$RECON_DIR/RESPTrig_3dute"
+mv "$RECON_DIR/$PPG_DATA" "$RECON_DIR/PPGData_3dute"
+mv "$RECON_DIR/$PPG_TRIG" "$RECON_DIR/PPGTrig_3dute"
 /media/data/Software/MATLAB/R2023a/bin/matlab -nodisplay -r "addpath('/media/data/tools/paris_ute'); cd('$RECON_DIR'); StaticRecon_sa; exit;"
 exit
 ENDSSH
@@ -127,5 +136,4 @@ echo "Images saved in the scanner database"
 
 echo "DONE" 
 
-#TODO rename files to simple names before calling the reconstruction
 

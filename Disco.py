@@ -70,7 +70,8 @@ for sl in slices:
 mask_sl = pydicom.dcmread(os.path.join(dir_path, acq_dict['Mask'][35]))
 mask_arr = mask_sl.pixel_array
 #roi = cv2.selectROI(mask_arr)
-roi = [139, 116, 10, 10]
+#roi = [139, 116, 10, 10]
+roi = [170, 150, 10, 10]
 mask,_, area = plot_ROI_rect(roi, mask_arr.shape[0], mask_arr)
 dynamic_curve = np.zeros(len(acq_dict.keys())-1)
 #Use the ROI as a mask to get the mean from each time point

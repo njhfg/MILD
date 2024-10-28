@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 import re
 
 
-path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15188/Series'
+path = '/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD002/ScanArchives'
 series_list = os.listdir(path)
 
 for s in series_list:
@@ -29,4 +29,6 @@ for s in series_list:
         result = re.search('SeriesDescription\" : (.*),', header_string)
         scan_type = result.group(1)
         print(scan_type)
+        series = re.search('SeriesNumber\" : (.*),', header_string)
+        print(series.group(0))
     print('\n')

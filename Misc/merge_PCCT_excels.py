@@ -25,11 +25,13 @@ def most_frequent(arr):
         eq_frequent = freq_occurence.count(max(freq_occurence)) #take the maximum number of appearances and count how many times it appears
         return [el[0] for el in freq[0:eq_frequent]] #use this to return the grid numbers that appear that amount of equal times 
 
+#%%
+'''First round'''
 
-main_dir = r'\\cifs.research.erasmusmc.nl\mrpg0002\Cristina\PCCT_score\received'
+main_dir = '\\cifs.research.erasmusmc.nl\mrpg0002\Cristina\PCCT_score\received'
 list_excel_files = os.listdir(main_dir) 
 
-slide_array = np.linspace(1, 72, 72, dtype=int)
+slide_array = np.linspace(1, 72, 72, dtype=int) #number of PPT slides
 result = pd.DataFrame({'Slide':slide_array})
 result['First selected image'] = [np.zeros(11, dtype=int) for _ in range(len(result))] #initialize the result table with empty arrays
 result['Second selected image'] = [np.zeros(11, dtype=int) for _ in range(len(result))]
@@ -59,4 +61,29 @@ for i in range(72):
 	#populate the lists with the result of choosing the most frequent value/s
     output.at[i, 'First selected image'] = most_frequent(result.at[i, 'First selected image'])
     output.at[i, 'Second selected image'] = most_frequent(result.at[i, 'Second selected image'])
-    output.at[i, 'Third selected image'] = most_frequent(result.at[i, 'Third selected image'])
+    output.at[i, 'Third selected image'] = most_frequent(result.at[i, 'Third selected image'])  
+    
+#%%
+'''Second round'''
+
+main_dir = '/home/cristina/mrpg_share2/Cristina/PCCT_score/received_second_round'
+list_excel_files = os.listdir(main_dir) 
+
+slide_array = np.linspace(1, 4, 4, dtype=int)
+result = pd.DataFrame({'Slide':slide_array})
+result['Selected image'] = [np.zeros(11, dtype=int) for _ in range(len(result))] #initialize the result table with empty arrays
+
+for j in range(len(list_excel_files)): #for each excel file in the list
+        path = os.path.join(main_dir, list_excel_files[j])
+        excel_file = pd.read_excel(path, usecols=['Selected image'])
+        excel_file.fillna(0, inplace=True) #replace None with 0
+        for i, row in result.iterrows(): 
+    		#replace the string 'none' with 0
+            if excel_file.loc[i, 'Selected image']=='none ':
+                excel_file.loc[i, 'Selected image'] = 0
+            row['Selected image'][j] = int(excel_file.loc[i, 'Selected image']) #add in result the value from the current file
+output = pd.DataFrame({'Slide':slide_array})   
+output['Selected image'] = [ [] for _ in range(len(result))] #initialize the output table with empty lists
+for i in range(len(slide_array)):
+	#populate the lists with the result of choosing the most frequent value/s
+    output.at[i, 'Selected image'] = most_frequent(result.at[i, 'Selected image'])
