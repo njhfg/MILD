@@ -74,6 +74,7 @@ def plot_ROI_rect(roi, im_size, im):
     fig, ax = plt.subplots() 
     ax.imshow(im)
     ax.add_patch(rect)
+    plt.show()
     
     mask = np.zeros((im_size, im_size))
     mask[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]] = 1
@@ -94,6 +95,7 @@ for i in range(no_dirs):
     dir_paths[i] = os.path.join(main_dir, dir_paths[i])
 
 #te = [5.168, 25.84, 51.68] 
+#TODO: write a function to extract the exact TE values from the DICOM tags
 te = [10.336, 51.68]
 
 #%%
@@ -158,7 +160,9 @@ t2_eq = t2_eq.astype(np.float32)
 fig = plt.figure()
 im = plt.imshow(t2_eq, cmap='plasma', vmin=np.amin(t2_eq), vmax=t2_max)
 fig.colorbar(im)
+plt.show()
 #Plot the signal decay
 plt.figure()
 plt.plot(te, decay_matrix)
 plt.title("Signal decay")
+plt.show()

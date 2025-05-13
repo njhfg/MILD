@@ -22,7 +22,7 @@ dir_paths = natsorted(dir_paths) #sort in natural order (0,1,5,10 min)
 no_dirs = len(dir_paths)
 
 for i in range(no_dirs):
-    #get the paths of the subfolders corresponding to each TE
+    #get the paths of the subfolders corresponding to each flip angle
     dir_paths[i] = os.path.join(main_dir, dir_paths[i])
 
 t1 = []
@@ -37,4 +37,5 @@ labels_list = ['pre', '1 min', '5 min', '10 min']
 for i in range(no_dirs):
     curr_t1 = t1[i]
     plt.plot(curr_t1[0:50], colors_list[i], label = labels_list[i])
+    plt.show()
 plt.legend()

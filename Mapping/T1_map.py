@@ -71,7 +71,7 @@ def plot_ROI_rect(roi, im_size, im):
     fig, ax = plt.subplots() 
     ax.imshow(im)
     ax.add_patch(rect)
-    
+    plt.show()
     mask = np.zeros((im_size, im_size))
     mask[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]] = 1
     #print('ROI mean', np.mean(im[mask==1]))
@@ -80,10 +80,10 @@ def plot_ROI_rect(roi, im_size, im):
     return mask, mean, area
 #%%
 '''Initialization'''
-#main_dir = r'/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD003/RAW/T1_mapping/T1map_10'
+#main_dir = r'/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD004/RAW/T1_mapping/T1map_5'
 def main(main_dir):
     
-    dir_paths = os.listdir(main_dir)
+    dir_paths = os.listdir(main_dir) #FA dirs
     no_dirs = len(dir_paths)
     
     for i in range(no_dirs):
@@ -92,11 +92,12 @@ def main(main_dir):
     dir_paths.reverse() #FA10,6,2
     
     fa = [10, 6, 2] #flip angle list
+    #fa = [2, 6, 10] #flip angle list
 #%%    
     '''Organize all the slices'''
     
     no_slices = len(os.listdir(os.path.join(main_dir, dir_paths[0])))
-    slices_matrix = [] #each row is a folder containing the ordered list of slices names
+    slices_matrix = [] #each row is a folder (FA10, FA6 or FA2) containing the ordered list of slices names
     #Create a list of the sorted slices names (based on instance number) for each directory
     for i,d in enumerate(dir_paths):
         slices_list = os.listdir(d)
@@ -105,13 +106,13 @@ def main(main_dir):
 #%%
     '''Getting the ROI for one slice'''
     
-    slice_no = 150
+    slice_no = 50
     slices_list = slices_matrix[0] #the slices names list of the first folder
     slice_path = os.path.join(dir_paths[0], slices_list[slice_no]) #path of the current slice
     s = pydicom.dcmread(slice_path) #read the DICOM data
     s_arr = s.pixel_array #get the array
-    TR = s[0x00180080].value
-    roi = (100, 100, 300, 300) #select the whole image
+    TR = s[0x00180080].value #in ms
+    roi = (100, 100, 300, 300) #select the whole lungs
     #roi = cv2.selectROI(s_arr)
     mask,_, area = plot_ROI_rect(roi, s_arr.shape[0], s_arr)
     data_matrix = np.zeros((no_dirs, area)) #to store the flatten ROI values for curve fitting
@@ -136,7 +137,7 @@ def main(main_dir):
     '''T1 mapping'''
         
     for t in range(data_matrix.shape[1]): #number of pixels
-        #do the curve fitting for each pixel location
+        #perform the curve fitting for each pixel location
         try:
             y_data = data_matrix[:, t]/np.sin(np.deg2rad(fa))
             x_data = data_matrix[:, t]/np.tan(np.deg2rad(fa))
@@ -145,25 +146,32 @@ def main(main_dir):
         except:
             pass
         
-    '''
-    Plot the fit of the curve for one of the pixels
-    plt.figure()
-    plt.plot(x_data, y_data, 'b-')
-    plt.plot(x_data, function_linear(x_data,params[0]), 'r--')
-    '''
-    
-   
-    t1_est_sq = t1_est.reshape((roi[3], roi[2])) #ROI dimensions
-    t1_max = np.amax(t1_est)
+    #To test the fit
+    t = 22346 #pick a random index
+    y_data = data_matrix[:, t]/np.sin(np.deg2rad(fa))
+    x_data = data_matrix[:, t]/np.tan(np.deg2rad(fa))
+    params, _ = curve_fit(function_linear, x_data, y_data)
+    slope = np.ones(3)*params
+    result = function_linear(x_data, slope)
+    plt.plot(x_data, y_data, 'r', label='measured curve')
+    plt.plot(x_data, result, 'g', label='fitted curve')
+    plt.legend()
+    plt.show()
+        
 
+    t1_est = t1_est.reshape((roi[3], roi[2])) #ROI dimensions
+    t1_max = np.amax(t1_est)
     
+    #Plot the T1 map
     fig = plt.figure()
-    im = plt.imshow(t1_est_sq, cmap='plasma', vmin=np.amin(t1_est), vmax=t1_max)
+    im = plt.imshow(t1_est, cmap='plasma')
     fig.colorbar(im)
+    plt.show()
     #Plot the signal decay
     plt.figure()
     plt.plot(fa, decay_matrix)
     plt.title("Signal decay")
+    plt.show()
     
     return t1_est
 if __name__ == "__main__":

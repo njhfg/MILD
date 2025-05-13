@@ -28,8 +28,8 @@ def sort_slices (slices_list, dir_path):
     return slices_list
 
 #%%
-'''Separate based on the acquisition time'''
-main_dir = r'/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD003/RAW/T1_mapping'
+'''Rename directories based on the acquisition time = before contrast and 3 times after contrast'''
+main_dir = r'/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD004/RAW/T1_mapping'
 dir_list = os.listdir(main_dir)
 acq_time_list = []
 for d in dir_list:
@@ -40,13 +40,13 @@ for d in dir_list:
 new_dir_names = ['T1map_0', 'T1map_1', 'T1map_5', 'T1map_10']
 sort_args = np.argsort(acq_time_list)
 
-for i in range(4):
+for i in range(len(dir_list)):
     old_path = os.path.join(main_dir, dir_list[sort_args[i]])
     new_path = os.path.join(main_dir, new_dir_names[i])
     os.rename(old_path, new_path)
 
 #%%
-'''Separate based on the creation time'''
+'''Separate based on the creation time because the flip angle is always 10 (acquired in the same series)'''
 
 dir_list = os.listdir(main_dir) #list of directories with the new names
 for d in dir_list:
@@ -63,6 +63,7 @@ for d in dir_list:
     slice3 = pydicom.dcmread(os.path.join(dir_path, slices_list[600]))
     time3 = int(slice3[0x00080032].value)    
     ls = []
+    
     for sl in slices_list:
         sl_path = os.path.join(dir_path, sl)
         s = pydicom.dcmread(sl_path)
@@ -73,6 +74,29 @@ for d in dir_list:
                 os.mkdir(os.path.join(dir_path, 'FA10'))
             os.replace(os.path.join(dir_path,sl), os.path.join(dir_path, 'FA10', sl))
         elif acq_time==time2:
+            if not os.path.exists(os.path.join(dir_path, 'FA6')):
+                os.mkdir(os.path.join(dir_path, 'FA6'))
+            os.replace(os.path.join(dir_path,sl), os.path.join(dir_path, 'FA6', sl))
+        else:
+            if not os.path.exists(os.path.join(dir_path, 'FA2')):
+                os.mkdir(os.path.join(dir_path, 'FA2'))
+            os.replace(os.path.join(dir_path,sl), os.path.join(dir_path, 'FA2', sl))
+
+#%% 
+'''Separate the slices from each directory based on the flip angle'''
+dir_list = os.listdir(main_dir) #list of directories with the new names
+for d in dir_list:
+    dir_path = os.path.join(main_dir, d)
+    slices_list = os.listdir(dir_path)
+    for sl in slices_list:
+        sl_path = os.path.join(dir_path, sl)
+        s = pydicom.dcmread(sl_path)
+        fa = int(s[0x00181314].value)
+        if fa == 10:
+            if not os.path.exists(os.path.join(dir_path,'FA10')):
+                os.mkdir(os.path.join(dir_path, 'FA10'))
+            os.replace(os.path.join(dir_path,sl), os.path.join(dir_path, 'FA10', sl))
+        elif fa == 6:
             if not os.path.exists(os.path.join(dir_path, 'FA6')):
                 os.mkdir(os.path.join(dir_path, 'FA6'))
             os.replace(os.path.join(dir_path,sl), os.path.join(dir_path, 'FA6', sl))

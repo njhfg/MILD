@@ -5,6 +5,11 @@ Created on Wed Sep 18 12:48:24 2024
 
 @author: cristina
 """
+'''
+export MKL_SERVICE_FORCE_INTEL=1 in the current environment
+in case there is an error about the number mof workers
+'''
+
 
 import dicom2nifti
 import os
@@ -16,26 +21,33 @@ from totalsegmentator.python_api import totalsegmentator
 #%%
 '''Convert DICOM to Nifti'''
 
-input_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/TE10'
-output_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/TE10.nii'
+input_dir = '/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD010/RAW/DISCOSTAR'
+output_dir = '/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD010/Processed/DISCOSTAR'
 
-dicom2nifti.dicom_series_to_nifti(input_path, output_path, reorient_nifti=True)
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+name = 'disco.nii'
+output_file = os.path.join(output_dir, name)
+dicom2nifti.dicom_series_to_nifti(input_dir, output_file, reorient_nifti=False)
 
 #%% 
 '''Run Total Segmentator'''
 
-vol_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/TE10.nii'
-total_seg_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/total_segmentations'
-vessels_seg_path = '/home/cristina/mrpg_share2/Cristina/Volunteer_scans/Exam15619/Propeller_test/vessels_segmentations'
+#vol_path = '/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD003/Processed/T1_mapping/T1map_0/FA2/FA2.nii'
+vol_path = '/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD010/Processed/DISCOSTAR/NIFTI/1.nii'
+
+total_seg_path = '/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD010/Processed/DISCOSTAR/total_segmentations'
+#vessels_seg_path = '/home/cristina/mrpg_share2/Cristina/Patient_scans/MILD003/Processed/T1_mapping/T1map_0/FA2/vessels_segmentations'
 
 if not os.path.exists(total_seg_path):
     os.mkdir(total_seg_path)
 
-if not os.path.exists(vessels_seg_path):
-    os.mkdir(vessels_seg_path)
+#if not os.path.exists(vessels_seg_path):
+#    os.mkdir(vessels_seg_path)
 
 totalsegmentator(vol_path, total_seg_path, task="total_mr", verbose=True)
-totalsegmentator(vol_path, vessels_seg_path, task="lung_vessels", verbose=True)
+#totalsegmentator(vol_path, vessels_seg_path, task="lung_vessels", verbose=True)
 
 #Delete the non-lungs segmentations
 seg_list = os.listdir(total_seg_path)
